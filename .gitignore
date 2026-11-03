@@ -1,0 +1,31 @@
+# Unreal-generated files and local caches.
+/Binaries/
+/DerivedDataCache/
+/Intermediate/
+/Saved/
+/Build/**
+!/Build/*/
+!/Build/*/PakBlacklist*.txt
+!/Build/**/*.ico
+!/Build/**/*.icns
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+Plugins/**/Saved/
+
+# Generated IDE projects and user preferences.
+.vs/
+.idea/
+.vscode/
+*.sln
+*.slnx
+*.suo
+*.user
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+.vsconfig
+/Config/DefaultEditorPerProjectUserSettings.ini
+
+# This local design document is intentionally not published.
+/函数攻击游戏_需求与技术设计.md
