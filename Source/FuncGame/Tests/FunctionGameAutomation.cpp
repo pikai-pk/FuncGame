@@ -145,6 +145,35 @@ bool FFunctionWorldCollision::RunTest(const FString&)
     Game->StartLevel(false,1);
     TestEqual(TEXT("configured wave total is applied to game mode"),Game->Rules.GetTotalCount(),4);
     Game->WaveComposition=OriginalPlan;
+
+    Game->StartLevel(false,1);
+    Game->UpdateExpression(TEXT("0"),TEXT(""));
+    const int32 WaveCounts[]={2,3,5,8,12};
+    int32 ExpectedKills=0;
+    for (int32 Wave=1;Wave<=5;++Wave)
+    {
+        for (int I=0;I<400 && Game->Rules.GetPendingCount()>0;++I) Game->Tick(0.1f);
+        if (!TestEqual(TEXT("all enemies in the wave can spawn"),Game->Rules.GetPendingCount(),0))
+        { Game->ReturnToMenu(); return false; }
+        TestEqual(TEXT("wave has the expected living enemies"),Game->Rules.GetAliveCount(),WaveCounts[Wave-1]);
+        for (FFunctionEnemy& Enemy:Game->Enemies)
+            if (Enemy.Actor.IsValid()) Enemy.Actor->SetActorLocation(FVector(-400,0,90));
+        for (int Attack=0;Attack<3 && Game->IsPlaying() && Game->Rules.GetWave()==Wave;++Attack)
+        {
+            TestTrue(TEXT("wave can be attacked"),Game->CanFire());
+            Game->Fire();
+            RunShot();
+        }
+        ExpectedKills+=WaveCounts[Wave-1];
+        TestEqual(TEXT("wave deaths are counted once"),Game->Rules.GetKilledCount(),ExpectedKills);
+        if (Wave<5) TestEqual(TEXT("the next wave starts after the previous one"),Game->Rules.GetWave(),Wave+1);
+    }
+    TestTrue(TEXT("defeating all thirty enemies wins the level"),Game->IsWon());
+    Game->StartLevel(false,2);
+    TestTrue(TEXT("next level starts in the playing state"),Game->IsPlaying());
+    TestEqual(TEXT("next level resets enemy count"),Game->Rules.GetRemainingCount(),30);
+    TestEqual(TEXT("next level resets mistakes"),Game->GetMistakesRemaining(),3);
+    TestEqual(TEXT("next level resets wave"),Game->Rules.GetWave(),1);
     Game->ReturnToMenu();
     return true;
 }
