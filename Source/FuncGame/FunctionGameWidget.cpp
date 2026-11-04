@@ -103,6 +103,10 @@ void UFunctionGameWidget::BuildInterface()
     UCanvasPanelSlot* HudSlot=CombatPanel->AddChildToCanvas(HudText);
     HudSlot->SetAnchors(FAnchors(0,0,1,0));
     HudSlot->SetOffsets(FMargin(24,18,24,36));
+    UTextBlock* Legend=MakeText(WidgetTree,TEXT("金色线：发射预览（遇障碍停止） · 绿 / 黄 / 红敌人需要 1 / 2 / 3 次命中"),16);
+    UCanvasPanelSlot* LegendSlot=CombatPanel->AddChildToCanvas(Legend);
+    LegendSlot->SetAnchors(FAnchors(0,0,1,0));
+    LegendSlot->SetOffsets(FMargin(24,56,24,25));
 
     UHorizontalBox* Controls=WidgetTree->ConstructWidget<UHorizontalBox>();
     UCanvasPanelSlot* ControlSlot=CombatPanel->AddChildToCanvas(Controls);
@@ -125,6 +129,9 @@ void UFunctionGameWidget::BuildInterface()
     Controls->AddChildToHorizontalBox(StartBox)->SetPadding(FMargin(3));
     FireButton=MakeButton(WidgetTree,TEXT("发射"));
     Controls->AddChildToHorizontalBox(FireButton)->SetPadding(FMargin(6,2));
+    UButton* PauseButton=MakeButton(WidgetTree,TEXT("暂停"));
+    PauseLabel=Cast<UTextBlock>(PauseButton->GetChildAt(0));
+    Controls->AddChildToHorizontalBox(PauseButton)->SetPadding(FMargin(6,2));
     UButton* HelpButton=MakeButton(WidgetTree,TEXT("函数帮助"));
     Controls->AddChildToHorizontalBox(HelpButton)->SetPadding(FMargin(6,2));
     StatusText=MakeText(WidgetTree,TEXT(""),15);
@@ -148,9 +155,10 @@ void UFunctionGameWidget::BuildInterface()
     Fill(Root,ResultPanel);
     Backdrop(WidgetTree,ResultPanel);
     UVerticalBox* Result=WidgetTree->ConstructWidget<UVerticalBox>();
-    Center(ResultPanel,Result,FVector2D(480,300));
+    Center(ResultPanel,Result,FVector2D(620,300));
     ResultText=MakeText(WidgetTree,TEXT(""),24);
     ResultText->SetAutoWrapText(true);
+    ResultText->SetJustification(ETextJustify::Center);
     Result->AddChildToVerticalBox(ResultText)->SetPadding(FMargin(0,0,0,18));
     UButton* Retry=MakeButton(WidgetTree,TEXT("重新挑战"));
     NextButton=MakeButton(WidgetTree,TEXT("进入下一关"));
@@ -168,6 +176,8 @@ void UFunctionGameWidget::BuildInterface()
     UScrollBox* Scroll=WidgetTree->ConstructWidget<UScrollBox>();
     Help->AddChildToVerticalBox(Scroll)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     const FString Guide=
+        TEXT("金色线显示发射预览，并在障碍物处停止；敌人移动时需要适当提前瞄准。")
+        TEXT("绿、黄、红敌人分别需要 1、2、3 次有效命中。可以暂停战斗调整函数，继续后发射。\n\n")
         TEXT("只输入 y= 后面的表达式；唯一变量是 x。支持空格和英文大小写。\n\n")
         TEXT("运算：+  -  *  /  ^，括号；2x、2(x+1)、(x+1)(x-1)、2sin(x) 可省略乘号。")
         TEXT("幂右结合，-x^2 等于 -(x^2)，2^-2 有效。常量：pi、π、e；支持科学计数法。\n\n")
@@ -201,6 +211,7 @@ void UFunctionGameWidget::BuildInterface()
     ExpressionBox->OnTextChanged.AddDynamic(this,&UFunctionGameWidget::OnExpressionChanged);
     StartBox->OnTextChanged.AddDynamic(this,&UFunctionGameWidget::OnStartChanged);
     FireButton->OnClicked.AddDynamic(this,&UFunctionGameWidget::OnFire);
+    PauseButton->OnClicked.AddDynamic(this,&UFunctionGameWidget::OnTogglePause);
     Easy->OnClicked.AddDynamic(this,&UFunctionGameWidget::OnEasy);
     Hard->OnClicked.AddDynamic(this,&UFunctionGameWidget::OnHard);
     HelpButton->OnClicked.AddDynamic(this,&UFunctionGameWidget::OnHelp);
@@ -222,6 +233,7 @@ void UFunctionGameWidget::Refresh()
     HudText->SetText(FText::FromString(Game->GetHudText()));
     StatusText->SetText(FText::FromString(Game->GetExpressionStatus()));
     ResultText->SetText(FText::FromString(Game->GetResultText()));
+    PauseLabel->SetText(FText::FromString(Game->IsPaused()?TEXT("继续"):TEXT("暂停")));
     FireButton->SetIsEnabled(Game->CanFire());
     NextButton->SetIsEnabled(Game->IsWon());
 }
@@ -236,6 +248,7 @@ void UFunctionGameWidget::OnFire() { if(Game) Game->Fire(); }
 void UFunctionGameWidget::OnEasy() { if(Game) Game->StartLevel(false,1); }
 void UFunctionGameWidget::OnHard() { if(Game) Game->StartLevel(true,1); }
 void UFunctionGameWidget::OnHelp() { if(Game) Game->SetHelpOpen(true); }
+void UFunctionGameWidget::OnTogglePause() { if(Game) Game->SetPaused(!Game->IsPaused()); }
 void UFunctionGameWidget::OnCloseHelp() { if(Game) Game->SetHelpOpen(false); }
 void UFunctionGameWidget::OnRetry() { if(Game) Game->StartLevel(Game->IsHard(),Game->GetLevel()); }
 void UFunctionGameWidget::OnNext() { if(Game && Game->IsWon()) Game->StartLevel(Game->IsHard(),Game->GetLevel()+1); }

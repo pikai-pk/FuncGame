@@ -53,11 +53,13 @@ public:
     void StartLevel(bool bHard, int32 InLevel);
     void ReturnToMenu();
     void SetHelpOpen(bool bOpen);
+    void SetPaused(bool bPaused);
     bool UpdateExpression(const FString& Text, const FString& ManualStart);
     void Fire();
     bool CanFire() const;
     bool IsPlaying() const { return Rules.GetState()==FuncGameRules::State::Playing; }
     bool IsHelpOpen() const { return bHelpOpen; }
+    bool IsPaused() const { return bPaused; }
     int32 GetLevel() const { return Rules.GetLevel(); }
     bool IsHard() const { return Rules.GetDifficulty()==FuncGameRules::Difficulty::Hard; }
     FString GetHudText() const;
@@ -74,6 +76,7 @@ private:
 #if WITH_DEV_AUTOMATION_TESTS
     friend class FFunctionWorldCollision;
 #endif
+    enum class EFailureReason : uint8 { None, EnemyAtDefence, ObstacleMistakes };
     UPROPERTY(Config, EditDefaultsOnly, Category="FuncGame|Rules")
     float EnemySpeedCmPerSecond = 50.0f;
     UPROPERTY(Config, EditDefaultsOnly, Category="FuncGame|Rules")
@@ -116,6 +119,8 @@ private:
     FString ExpressionStatus;
     bool bExpressionReady = false;
     bool bHelpOpen = false;
+    bool bPaused = false;
+    EFailureReason FailureReason = EFailureReason::None;
     int64 NextEnemyId = 1;
     int64 NextShotId = 1;
     float SpawnTimer = 0.0f;
@@ -124,6 +129,7 @@ private:
     TArray<FFunctionShot> Shots;
     TArray<FFunctionObstacle> Obstacles;
     TArray<TWeakObjectPtr<AActor>> ArenaActors;
+    TWeakObjectPtr<UInstancedStaticMeshComponent> PreviewMesh;
 
     void CreateArena();
     void ClearCombatants();
@@ -131,6 +137,7 @@ private:
     void UpdateShots(float DeltaSeconds);
     bool TrySpawnEnemy();
     void RefreshWidget();
+    void RebuildPreview();
     AActor* SpawnShape(UStaticMesh* Mesh, const FVector& Location, const FVector& Scale, const FLinearColor& Color);
     FVector PointToWorld(const FuncMath::TrajectoryPoint& Point) const;
     void AddTrail(FFunctionShot& Shot, const FVector& From, const FVector& To);

@@ -114,7 +114,7 @@ void AFunctionGameMode::StartPlay()
 void AFunctionGameMode::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
-    if (!IsPlaying() || bHelpOpen) return;
+    if (!IsPlaying() || bHelpOpen || bPaused) return;
     const float Step=FMath::Clamp(DeltaSeconds,0.0f,0.1f);
     SpawnTimer-=Step;
     if (Rules.GetPendingCount()>0 && SpawnTimer<=0.0f)
@@ -167,6 +167,26 @@ void AFunctionGameMode::CreateArena()
         const FVector2D Size=Box.Max-Box.Min;
         ArenaActors.Add(SpawnShape(CubeMesh,FVector(Center.X,Center.Y,75),FVector(Size.X/100.0,Size.Y/100.0,1.5),FLinearColor(0.8f,0.25f,0.08f)));
     }
+    FActorSpawnParameters Spawn;
+    Spawn.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    if (AActor* PreviewActor=GetWorld()->SpawnActor<AActor>(AActor::StaticClass(),FVector::ZeroVector,FRotator::ZeroRotator,Spawn))
+    {
+        UInstancedStaticMeshComponent* Mesh=NewObject<UInstancedStaticMeshComponent>(PreviewActor);
+        PreviewActor->SetRootComponent(Mesh);
+        Mesh->SetMobility(EComponentMobility::Movable);
+        Mesh->SetStaticMesh(CubeMesh);
+        Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        Mesh->RegisterComponent();
+        Mesh->SetVisibility(false);
+        if (TintMaterial)
+        {
+            UMaterialInstanceDynamic* Dynamic=UMaterialInstanceDynamic::Create(TintMaterial,Mesh);
+            Dynamic->SetVectorParameterValue(TEXT("Tint"),FLinearColor(1.0f,0.65f,0.05f));
+            Mesh->SetMaterial(0,Dynamic);
+        }
+        PreviewMesh=Mesh;
+        ArenaActors.Add(PreviewActor);
+    }
     GetWorld()->SpawnActor<ADirectionalLight>(ADirectionalLight::StaticClass(),FVector(0,0,500),FRotator(-55,-35,0));
 }
 
@@ -193,6 +213,8 @@ void AFunctionGameMode::StartLevel(bool bHard,int32 InLevel)
     Rules.Start(bHard ? FuncGameRules::Difficulty::Hard : FuncGameRules::Difficulty::Easy,InLevel);
     Random.Initialize(104729+InLevel);
     bHelpOpen=false;
+    bPaused=false;
+    FailureReason=EFailureReason::None;
     SpawnTimer=0.0f;
     RefreshWidget();
 }
@@ -202,12 +224,21 @@ void AFunctionGameMode::ReturnToMenu()
     ClearCombatants();
     Rules=FuncGameRules::Session{};
     bHelpOpen=false;
+    bPaused=false;
+    FailureReason=EFailureReason::None;
     RefreshWidget();
 }
 
 void AFunctionGameMode::SetHelpOpen(bool bOpen)
 {
     bHelpOpen=bOpen;
+    RefreshWidget();
+}
+
+void AFunctionGameMode::SetPaused(bool bInPaused)
+{
+    if (!IsPlaying()) return;
+    bPaused=bInPaused;
     RefreshWidget();
 }
 
@@ -226,6 +257,7 @@ void AFunctionGameMode::ClearCombatants()
 bool AFunctionGameMode::UpdateExpression(const FString& Text,const FString& ManualStart)
 {
     bExpressionReady=false;
+    if (PreviewMesh.IsValid()) PreviewMesh->ClearInstances();
     FuncMath::Error Error;
     FTCHARToUTF8 Utf8(*Text);
     const std::string Source(Utf8.Get(),Utf8.Length());
@@ -262,6 +294,7 @@ bool AFunctionGameMode::UpdateExpression(const FString& Text,const FString& Manu
         return false;
     }
     bExpressionReady=true;
+    RebuildPreview();
     ExpressionStatus=FString::Printf(TEXT("可发射 · x0 = %.3g · 轨迹已平移至发射点%s"),PreviewTrajectory.StartX,
         PreviewTrajectory.StoppedEarly ? TEXT(" · 将在断点或精度限制处停止") : TEXT(""));
     RefreshWidget();
@@ -270,12 +303,13 @@ bool AFunctionGameMode::UpdateExpression(const FString& Text,const FString& Manu
 
 bool AFunctionGameMode::CanFire() const
 {
-    return IsPlaying() && !bHelpOpen && bExpressionReady && Shots.Num()<FMath::Clamp(MaximumProjectiles,1,64);
+    return IsPlaying() && !bHelpOpen && !bPaused && bExpressionReady && Shots.Num()<FMath::Clamp(MaximumProjectiles,1,64);
 }
 
 FString AFunctionGameMode::GetExpressionStatus() const
 {
     if (bHelpOpen) return TEXT("查看帮助时已暂停");
+    if (bPaused) return FString::Printf(TEXT("已暂停，可调整函数；继续后发射 · %s"),*ExpressionStatus);
     if (IsPlaying() && Shots.Num()>=FMath::Clamp(MaximumProjectiles,1,64)) return TEXT("当前子弹数量已达上限，请稍候");
     return ExpressionStatus;
 }
@@ -283,6 +317,35 @@ FString AFunctionGameMode::GetExpressionStatus() const
 FVector AFunctionGameMode::PointToWorld(const FuncMath::TrajectoryPoint& Point) const
 {
     return FVector(PlayerX+Point.Progress*UnitsPerMath,-Point.Height*UnitsPerMath,ShotHeight);
+}
+
+void AFunctionGameMode::RebuildPreview()
+{
+    if (!PreviewMesh.IsValid()) return;
+    PreviewMesh->ClearInstances();
+    for (size_t I=1;I<PreviewTrajectory.Points.size();++I)
+    {
+        const FVector From=PointToWorld(PreviewTrajectory.Points[I-1]);
+        FVector To=PointToWorld(PreviewTrajectory.Points[I]);
+        double Stop=1.0;
+        bool bBlocked=false;
+        for (const FFunctionObstacle& Box:Obstacles)
+        {
+            double Time=0.0;
+            if (SegmentBox(FVector2D(From.X,From.Y),FVector2D(To.X,To.Y),Box,Time) && Time<=Stop)
+            { Stop=Time; bBlocked=true; }
+        }
+        To=FMath::Lerp(From,To,Stop);
+        const FVector Delta=To-From;
+        if (Delta.SizeSquared2D()>0.01 && !((From.Y>800 && To.Y>800) || (From.Y< -800 && To.Y< -800)))
+        {
+            const FRotator Rotation(0.0,FMath::RadiansToDegrees(FMath::Atan2(Delta.Y,Delta.X)),0.0);
+            FVector Center=(From+To)*0.5;
+            Center.Z+=4.0;
+            PreviewMesh->AddInstance(FTransform(Rotation,Center,FVector(Delta.Size2D()/100.0,0.055,0.025)),true);
+        }
+        if (bBlocked) break;
+    }
 }
 
 void AFunctionGameMode::Fire()
@@ -390,6 +453,7 @@ void AFunctionGameMode::UpdateEnemies(float DeltaSeconds)
         if (Character->GetActorLocation().X<=PlayerX+75.0)
         {
             Rules.EnemyReachedDefence();
+            FailureReason=EFailureReason::EnemyAtDefence;
             break;
         }
     }
@@ -439,6 +503,7 @@ void AFunctionGameMode::UpdateShots(float DeltaSeconds)
                 {
                     Stop=Hit.Time;
                     Rules.RegisterObstacleHit(Shot.Id);
+                    if (!IsPlaying()) FailureReason=EFailureReason::ObstacleMistakes;
                     bFinished=true;
                     break;
                 }
@@ -478,10 +543,14 @@ FString AFunctionGameMode::GetHudText() const
 
 FString AFunctionGameMode::GetResultText() const
 {
-    return IsWon()?FString::Printf(TEXT("关卡胜利！全部 %d 名敌人已被击败。"),Rules.GetTotalCount()):TEXT("挑战失败。敌人抵达防线或失误次数已用尽。");
+    if (IsWon()) return FString::Printf(TEXT("关卡胜利！全部 %d 名敌人已被击败。"),Rules.GetTotalCount());
+    if (FailureReason==EFailureReason::EnemyAtDefence) return TEXT("挑战失败：敌人抵达防线。");
+    if (FailureReason==EFailureReason::ObstacleMistakes) return TEXT("挑战失败：撞击障碍物，失误次数已用尽。");
+    return TEXT("挑战失败。");
 }
 
 void AFunctionGameMode::RefreshWidget()
 {
+    if (PreviewMesh.IsValid()) PreviewMesh->SetVisibility(IsPlaying() && bExpressionReady);
     if (Widget) Widget->Refresh();
 }

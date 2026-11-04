@@ -21,6 +21,9 @@ public:
     void Refresh();
 
 private:
+#if WITH_DEV_AUTOMATION_TESTS
+    friend class FFunctionWorldCollision;
+#endif
     UPROPERTY()
     TObjectPtr<AFunctionGameMode> Game;
     UPROPERTY()
@@ -29,6 +32,8 @@ private:
     TObjectPtr<UTextBlock> StatusText;
     UPROPERTY()
     TObjectPtr<UTextBlock> ResultText;
+    UPROPERTY()
+    TObjectPtr<UTextBlock> PauseLabel;
     UPROPERTY()
     TObjectPtr<UEditableTextBox> ExpressionBox;
     UPROPERTY()
@@ -54,6 +59,7 @@ private:
     UFUNCTION() void OnEasy();
     UFUNCTION() void OnHard();
     UFUNCTION() void OnHelp();
+    UFUNCTION() void OnTogglePause();
     UFUNCTION() void OnCloseHelp();
     UFUNCTION() void OnRetry();
     UFUNCTION() void OnNext();

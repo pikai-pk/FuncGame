@@ -4,6 +4,8 @@
 
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "Components/Button.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "../FunctionGameMode.h"
 #include "../FunctionGameWidget.h"
@@ -75,6 +77,7 @@ bool FFunctionWorldSmoke::RunTest(const FString&)
     }
     TestEqual(TEXT("three obstacle hits consume three chances"),Game->GetMistakesRemaining(),0);
     TestTrue(TEXT("hard mode ends after third hit"),Game->IsFinished() && !Game->IsWon());
+    TestTrue(TEXT("failure explains the obstacle mistakes"),Game->GetResultText().Contains(TEXT("障碍物")));
     Game->ReturnToMenu();
     return true;
 }
@@ -106,6 +109,20 @@ bool FFunctionWorldCollision::RunTest(const FString&)
     if (!TestTrue(TEXT("two enemies available for piercing test"),Prepare())) return false;
     TestEqual(TEXT("default configured total is thirty"),Game->Rules.GetTotalCount(),30);
     TestEqual(TEXT("default configuration has five waves"),Game->WaveComposition.Num(),5);
+    if (TestTrue(TEXT("trajectory preview is present"),Game->PreviewMesh.IsValid()))
+    {
+        const int32 Count=Game->PreviewMesh->GetInstanceCount();
+        if (TestTrue(TEXT("valid expression draws preview"),Count>0))
+        {
+            FTransform LastSegment;
+            TestTrue(TEXT("read last preview segment"),Game->PreviewMesh->GetInstanceTransform(Count-1,LastSegment,true));
+            const double PreviewEnd=LastSegment.GetLocation().X+LastSegment.GetScale3D().X*50.0;
+            TestTrue(TEXT("preview stops at the obstacle's projectile boundary"),FMath::IsNearlyEqual(PreviewEnd,486.0,1.0));
+        }
+        TestFalse(TEXT("invalid expression is rejected"),Game->UpdateExpression(TEXT("badname"),TEXT("")));
+        TestEqual(TEXT("invalid expression clears preview"),Game->PreviewMesh->GetInstanceCount(),0);
+        TestTrue(TEXT("valid expression restores preview"),Game->UpdateExpression(TEXT("0"),TEXT("")));
+    }
     Game->Enemies[0].Actor->SetActorLocation(FVector(-650,0,90));
     Game->Enemies[1].Actor->SetActorLocation(FVector(-350,0,90));
     Game->Enemies[0].Health=Game->Enemies[1].Health=2;
@@ -115,6 +132,19 @@ bool FFunctionWorldCollision::RunTest(const FString&)
     Game->Tick(0.1f);
     TestTrue(TEXT("help freezes enemies"),Game->Enemies[0].Actor->GetActorLocation().Equals(BeforePause));
     Game->SetHelpOpen(false);
+
+    Game->SetPaused(true);
+    TestFalse(TEXT("manual pause disables firing"),Game->CanFire());
+    Game->Tick(0.1f);
+    TestTrue(TEXT("manual pause freezes enemies"),Game->Enemies[0].Actor->GetActorLocation().Equals(BeforePause));
+    TestTrue(TEXT("expression can be changed while paused"),Game->UpdateExpression(TEXT("x"),TEXT("")));
+    TestFalse(TEXT("changing expression does not resume firing"),Game->CanFire());
+    Game->SetHelpOpen(true);
+    Game->SetHelpOpen(false);
+    TestTrue(TEXT("closing help preserves manual pause"),Game->IsPaused());
+    Game->SetPaused(false);
+    TestTrue(TEXT("resuming enables firing"),Game->CanFire());
+    Game->UpdateExpression(TEXT("0"),TEXT(""));
 
     Game->Fire();
     TestEqual(TEXT("one projectile was launched"),Game->GetShotCount(),1);
@@ -139,6 +169,11 @@ bool FFunctionWorldCollision::RunTest(const FString&)
     TestEqual(TEXT("enemy before obstacle takes damage"),Game->Enemies[0].Health,1);
     TestEqual(TEXT("enemy behind obstacle is protected"),Game->Enemies[1].Health,2);
     TestEqual(TEXT("obstacle destroys projectile"),Game->GetShotCount(),0);
+
+    Game->Enemies[0].Actor->SetActorLocation(FVector(-774,0,90));
+    Game->Tick(0.1f);
+    TestTrue(TEXT("reaching the defence ends the level"),Game->IsFinished() && !Game->IsWon());
+    TestTrue(TEXT("failure explains the defence breach"),Game->GetResultText().Contains(TEXT("防线")));
 
     const TArray<FString> OriginalPlan=Game->WaveComposition;
     Game->WaveComposition={TEXT("1,1,0"),TEXT("0,1,1")};
@@ -169,7 +204,16 @@ bool FFunctionWorldCollision::RunTest(const FString&)
         if (Wave<5) TestEqual(TEXT("the next wave starts after the previous one"),Game->Rules.GetWave(),Wave+1);
     }
     TestTrue(TEXT("defeating all thirty enemies wins the level"),Game->IsWon());
-    Game->StartLevel(false,2);
+    UFunctionGameWidget* GameWidget=Game->GetGameWidget();
+    if (TestNotNull(TEXT("victory widget exists"),GameWidget))
+    {
+        GameWidget->Refresh();
+        if (TestNotNull(TEXT("next-level button exists"),GameWidget->NextButton.Get()))
+        {
+            TestTrue(TEXT("next-level button is enabled after victory"),GameWidget->NextButton->GetIsEnabled());
+            GameWidget->NextButton->OnClicked.Broadcast();
+        }
+    }
     TestTrue(TEXT("next level starts in the playing state"),Game->IsPlaying());
     TestEqual(TEXT("next level resets enemy count"),Game->Rules.GetRemainingCount(),30);
     TestEqual(TEXT("next level resets mistakes"),Game->GetMistakesRemaining(),3);
