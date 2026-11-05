@@ -2,7 +2,29 @@
 
 一个使用 Unreal Engine 5.8 和 C++ 实现的俯视函数攻击游戏原型。玩家选择难度后，输入以 `x` 为变量的表达式，发射沿函数轨迹飞行的子弹，防守逐波出现的敌人。
 
-## 打开与游玩
+## 下载试玩
+
+[下载 Windows 64 位试玩包](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.0/FuncGame-Windows-Shipping-Release.zip) · [查看所有版本](https://github.com/pikai-pk/FuncGame/releases)
+
+试玩包无需安装 Unreal Engine。完整解压后，打开 `Windows` 文件夹，双击 `FuncGame.exe` 启动；按 `Alt + F4` 退出游戏。需要 Windows 64 位系统和支持 DirectX 12 的显卡。如果提示缺少 Visual C++ 运行库，可运行包内的 `Engine/Extras/Redist/en-us/vc_redist.x64.exe`。
+
+## 游戏视频
+
+两段视频均带有说明字幕，原始录屏为静音。
+
+### 简单模式：完整通关
+
+https://github.com/user-attachments/assets/7b814c24-2195-4aee-8b29-661915e22d9e
+
+[下载简单模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.0/FuncGame-Easy-Playthrough.mp4)
+
+### 困难模式：基础函数和失误演示
+
+https://github.com/user-attachments/assets/13764396-11e8-4c44-b135-f14eb578ecea
+
+[下载困难模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.0/FuncGame-Hard-Functions.mp4)
+
+## 从源码运行
 
 1. 安装 Unreal Engine 5.8、Visual Studio C++ 工具链和 Git LFS。克隆仓库前执行 `git lfs install`，克隆后确认资源已完整下载。
 2. 打开 `FuncGame.uproject`，按提示编译项目。在编辑器中点击“运行”。默认使用引擎的 Entry 关卡，场地在运行时创建；原有第三人称示例内容仍在项目中。
