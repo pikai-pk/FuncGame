@@ -16,17 +16,17 @@
 
 演示第 1 波至第 5 波的完整防守通关过程，消灭全部 30 名敌人并展示「关卡胜利」结算界面。
 
-[![简单模式通关视频预览，点击查看](Docs/FuncGame-Easy-Preview.png)](Docs/FuncGame-Easy-Playthrough.mp4)
+https://github.com/user-attachments/assets/7e8ff959-54bf-41b6-83ed-033aa61f052e
 
-[下载简单模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Easy-Playthrough.mp4) · [仓库内直接查看](Docs/FuncGame-Easy-Playthrough.mp4)
+[下载简单模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Easy-Playthrough.mp4) · [仓库内文件](Docs/FuncGame-Easy-Playthrough.mp4)
 
 ### 困难模式：安全防守与第五波失误演示
 
 第 1 至 4 波安全避开全部障碍物完成防守（保持 3/3 零失误）；在第五波使用 `y = 0.5x` 连续 3 次撞击障碍物，演示失误次数耗尽与「挑战失败」结算界面。
 
-[![困难模式第五波失误演示预览，点击查看](Docs/FuncGame-Hard-Preview.png)](Docs/FuncGame-Hard-Playthrough.mp4)
+https://github.com/user-attachments/assets/577a6ee5-a07c-408e-bdf3-9d3f8eb2de9d
 
-[下载困难模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Hard-Playthrough.mp4) · [仓库内直接查看](Docs/FuncGame-Hard-Playthrough.mp4)
+[下载困难模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Hard-Playthrough.mp4) · [仓库内文件](Docs/FuncGame-Hard-Playthrough.mp4)
 
 ## 从源码运行
 
