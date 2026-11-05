@@ -10,23 +10,23 @@
 
 ## 游戏视频
 
-两段视频均带有说明字幕，成片为静音。
+视频均使用 OBS Studio 录制，成片为静音。输入函数均严格控制在两位小数以内，展示平滑轨迹与精准防守。
 
-### 简单模式：完整通关（历史录制）
+### 简单模式：完整通关实录
 
-本段录制于敌人受击变色修复之前，展示完整通关过程。
+演示第 1 波至第 5 波的完整防守通关过程，消灭全部 30 名敌人并展示「关卡胜利」结算界面。
 
-https://github.com/user-attachments/assets/7b814c24-2195-4aee-8b29-661915e22d9e
+[![简单模式通关视频预览，点击查看](Docs/FuncGame-Easy-Preview.png)](Docs/FuncGame-Easy-Playthrough.mp4)
 
-[下载简单模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Easy-Playthrough.mp4)
+[下载简单模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Easy-Playthrough.mp4) · [仓库内直接查看](Docs/FuncGame-Easy-Playthrough.mp4)
 
-### 困难模式：修复后的基础函数和第四波失误演示
+### 困难模式：安全防守与第五波失误演示
 
-这段最新录制演示了常见函数，并在第四波耗尽失误次数；其中慢放展示了三级敌人逐次降级的过程。
+第 1 至 4 波安全避开全部障碍物完成防守（保持 3/3 零失误）；在第五波使用 `y = 0.5x` 连续 3 次撞击障碍物，演示失误次数耗尽与「挑战失败」结算界面。
 
-[![困难模式视频预览，点击下载](Docs/FuncGame-Hard-Preview.png)](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Hard-Functions.mp4)
+[![困难模式第五波失误演示预览，点击查看](Docs/FuncGame-Hard-Preview.png)](Docs/FuncGame-Hard-Playthrough.mp4)
 
-[下载困难模式最新视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Hard-Functions.mp4)
+[下载困难模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Hard-Playthrough.mp4) · [仓库内直接查看](Docs/FuncGame-Hard-Playthrough.mp4)
 
 ## 从源码运行
 
