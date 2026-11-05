@@ -4,25 +4,29 @@
 
 ## 下载试玩
 
-[下载 Windows 64 位试玩包](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.0/FuncGame-Windows-Shipping-Release.zip) · [查看所有版本](https://github.com/pikai-pk/FuncGame/releases)
+[下载最新版 Windows 64 位试玩包](https://github.com/pikai-pk/FuncGame/releases/latest/download/FuncGame-Windows-Shipping-Release.zip) · [查看所有版本](https://github.com/pikai-pk/FuncGame/releases)
 
 试玩包无需安装 Unreal Engine。完整解压后，打开 `Windows` 文件夹，双击 `FuncGame.exe` 启动；按 `Alt + F4` 退出游戏。需要 Windows 64 位系统和支持 DirectX 12 的显卡。如果提示缺少 Visual C++ 运行库，可运行包内的 `Engine/Extras/Redist/en-us/vc_redist.x64.exe`。
 
 ## 游戏视频
 
-两段视频均带有说明字幕，原始录屏为静音。
+两段视频均带有说明字幕，成片为静音。
 
-### 简单模式：完整通关
+### 简单模式：完整通关（历史录制）
+
+本段录制于敌人受击变色修复之前，展示完整通关过程。
 
 https://github.com/user-attachments/assets/7b814c24-2195-4aee-8b29-661915e22d9e
 
-[下载简单模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.0/FuncGame-Easy-Playthrough.mp4)
+[下载简单模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Easy-Playthrough.mp4)
 
-### 困难模式：基础函数和失误演示
+### 困难模式：修复后的基础函数和第四波失误演示
 
-https://github.com/user-attachments/assets/13764396-11e8-4c44-b135-f14eb578ecea
+这段最新录制演示了常见函数，并在第四波耗尽失误次数；其中慢放展示了三级敌人逐次降级的过程。
 
-[下载困难模式视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.0/FuncGame-Hard-Functions.mp4)
+[![困难模式视频预览，点击下载](Docs/FuncGame-Hard-Preview.png)](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Hard-Functions.mp4)
+
+[下载困难模式最新视频](https://github.com/pikai-pk/FuncGame/releases/download/v0.1.1/FuncGame-Hard-Functions.mp4)
 
 ## 从源码运行
 
@@ -30,7 +34,7 @@ https://github.com/user-attachments/assets/13764396-11e8-4c44-b135-f14eb578ecea
 2. 打开 `FuncGame.uproject`，按提示编译项目。在编辑器中点击“运行”。默认使用引擎的 Entry 关卡，场地在运行时创建；原有第三人称示例内容仍在项目中。
 3. 选择简单或困难模式。输入框只填写 `y=` 后的内容；例如 `x`、`x^2`、`3sin(5x)`。金色线是发射预览，会在障碍物处停止；可使用“暂停”停住战斗并调整函数，再点击“继续”和“发射”。游戏内的“函数帮助”介绍支持的函数、定义域和轨迹平移规则。
 
-敌人触及左侧防线会导致失败。困难模式中，子弹三次撞到障碍物也会失败；简单模式的障碍物仍会消灭子弹，但不扣除失误次数。
+敌人触及左侧防线会导致失败。三级和二级敌人每次被命中都会降一级并改变颜色；一级敌人再被命中一次便会死亡。困难模式中，子弹三次撞到障碍物也会失败；简单模式的障碍物仍会消灭子弹，但不扣除失误次数。
 
 ## Unreal MCP
 

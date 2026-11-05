@@ -103,7 +103,7 @@ void UFunctionGameWidget::BuildInterface()
     UCanvasPanelSlot* HudSlot=CombatPanel->AddChildToCanvas(HudText);
     HudSlot->SetAnchors(FAnchors(0,0,1,0));
     HudSlot->SetOffsets(FMargin(24,18,24,36));
-    UTextBlock* Legend=MakeText(WidgetTree,TEXT("金色线：发射预览（遇障碍停止） · 绿 / 黄 / 红敌人需要 1 / 2 / 3 次命中"),16);
+    UTextBlock* Legend=MakeText(WidgetTree,TEXT("金色线：发射预览（遇障碍停止） · 绿 / 黄 / 红：1 / 2 / 3 级（命中降一级，1 级再中即死）"),16);
     UCanvasPanelSlot* LegendSlot=CombatPanel->AddChildToCanvas(Legend);
     LegendSlot->SetAnchors(FAnchors(0,0,1,0));
     LegendSlot->SetOffsets(FMargin(24,56,24,25));
@@ -177,7 +177,7 @@ void UFunctionGameWidget::BuildInterface()
     Help->AddChildToVerticalBox(Scroll)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     const FString Guide=
         TEXT("金色线显示发射预览，并在障碍物处停止；敌人移动时需要适当提前瞄准。")
-        TEXT("绿、黄、红敌人分别需要 1、2、3 次有效命中。可以暂停战斗调整函数，继续后发射。\n\n")
+        TEXT("绿、黄、红敌人分别对应 1、2、3 级。2、3 级每次被命中都会降一级，1 级再被命中就会死亡。可以暂停战斗调整函数，继续后发射。\n\n")
         TEXT("只输入 y= 后面的表达式；唯一变量是 x。支持空格和英文大小写。\n\n")
         TEXT("运算：+  -  *  /  ^，括号；2x、2(x+1)、(x+1)(x-1)、2sin(x) 可省略乘号。")
         TEXT("幂右结合，-x^2 等于 -(x^2)，2^-2 有效。常量：pi、π、e；支持科学计数法。\n\n")

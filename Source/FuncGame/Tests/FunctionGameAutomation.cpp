@@ -6,7 +6,9 @@
 #include "Engine/World.h"
 #include "Components/Button.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "../FunctionGameMode.h"
 #include "../FunctionGameWidget.h"
 #include "../Math/FunctionExpression.h"
@@ -94,6 +96,13 @@ bool FFunctionWorldCollision::RunTest(const FString&)
     AFunctionGameMode* Game=World ? Cast<AFunctionGameMode>(World->GetAuthGameMode()) : nullptr;
     if (!TestNotNull(TEXT("game world uses FunctionGameMode"),Game)) return false;
 
+    auto EnemyTint=[](ACharacter* Enemy)
+    {
+        if (!Enemy || !Enemy->GetMesh() || Enemy->GetMesh()->GetNumMaterials()==0) return FLinearColor::Black;
+        UMaterialInstanceDynamic* Dynamic=Cast<UMaterialInstanceDynamic>(Enemy->GetMesh()->GetMaterial(0));
+        return Dynamic ? Dynamic->K2_GetVectorParameterValue(TEXT("Tint")) : FLinearColor::Black;
+    };
+
     auto Prepare=[&]()
     {
         Game->StartLevel(false,1);
@@ -107,6 +116,10 @@ bool FFunctionWorldCollision::RunTest(const FString&)
     };
 
     if (!TestTrue(TEXT("two enemies available for piercing test"),Prepare())) return false;
+    TestEqual(TEXT("first enemy starts at level two"),Game->Enemies[0].Health,2);
+    TestEqual(TEXT("second enemy starts at level one"),Game->Enemies[1].Health,1);
+    TestTrue(TEXT("level two enemy starts yellow"),EnemyTint(Game->Enemies[0].Actor.Get()).Equals(FLinearColor::Yellow,0.01f));
+    TestTrue(TEXT("level one enemy starts green"),EnemyTint(Game->Enemies[1].Actor.Get()).Equals(FLinearColor::Green,0.01f));
     TestEqual(TEXT("default configured total is thirty"),Game->Rules.GetTotalCount(),30);
     TestEqual(TEXT("default configuration has five waves"),Game->WaveComposition.Num(),5);
     if (TestTrue(TEXT("trajectory preview is present"),Game->PreviewMesh.IsValid()))
@@ -125,7 +138,6 @@ bool FFunctionWorldCollision::RunTest(const FString&)
     }
     Game->Enemies[0].Actor->SetActorLocation(FVector(-650,0,90));
     Game->Enemies[1].Actor->SetActorLocation(FVector(-350,0,90));
-    Game->Enemies[0].Health=Game->Enemies[1].Health=2;
     const FVector BeforePause=Game->Enemies[0].Actor->GetActorLocation();
     Game->SetHelpOpen(true);
     TestFalse(TEXT("help disables firing"),Game->CanFire());
@@ -152,22 +164,22 @@ bool FFunctionWorldCollision::RunTest(const FString&)
     TestTrue(TEXT("launched path does not change when input changes"),
         Game->Shots.Num()==1 && FMath::IsNearlyZero(Game->Shots[0].Points.back().Height));
     RunShot();
-    TestEqual(TEXT("first enemy is hit only once by the projectile"),Game->Enemies[0].Health,1);
-    TestEqual(TEXT("projectile pierces and hits second enemy once"),Game->Enemies[1].Health,1);
+    TestEqual(TEXT("level two enemy drops to level one after one hit"),Game->Enemies[0].Health,1);
+    TestTrue(TEXT("downgraded enemy changes from yellow to green"),EnemyTint(Game->Enemies[0].Actor.Get()).Equals(FLinearColor::Green,0.01f));
+    TestEqual(TEXT("piercing projectile kills level one enemy immediately"),Game->Rules.GetKilledCount(),1);
     Game->UpdateExpression(TEXT("0"),TEXT(""));
     Game->Fire();
     RunShot();
-    TestEqual(TEXT("a second projectile defeats both enemies"),Game->Rules.GetKilledCount(),2);
+    TestEqual(TEXT("a second projectile kills the remaining level one enemy"),Game->Rules.GetKilledCount(),2);
     TestEqual(TEXT("next wave begins only after both deaths"),Game->Rules.GetWave(),2);
 
     if (!TestTrue(TEXT("two enemies available for obstacle order test"),Prepare())) return false;
     Game->Enemies[0].Actor->SetActorLocation(FVector(400,0,90));
     Game->Enemies[1].Actor->SetActorLocation(FVector(700,0,90));
-    Game->Enemies[0].Health=Game->Enemies[1].Health=2;
     Game->Fire();
     RunShot();
     TestEqual(TEXT("enemy before obstacle takes damage"),Game->Enemies[0].Health,1);
-    TestEqual(TEXT("enemy behind obstacle is protected"),Game->Enemies[1].Health,2);
+    TestEqual(TEXT("enemy behind obstacle is protected"),Game->Enemies[1].Health,1);
     TestEqual(TEXT("obstacle destroys projectile"),Game->GetShotCount(),0);
 
     Game->Enemies[0].Actor->SetActorLocation(FVector(-774,0,90));
@@ -175,11 +187,11 @@ bool FFunctionWorldCollision::RunTest(const FString&)
     TestTrue(TEXT("reaching the defence ends the level"),Game->IsFinished() && !Game->IsWon());
     TestTrue(TEXT("failure explains the defence breach"),Game->GetResultText().Contains(TEXT("防线")));
 
-    const TArray<FString> OriginalPlan=Game->WaveComposition;
+    const TArray<FString> TierTestOriginalPlan=Game->WaveComposition;
     Game->WaveComposition={TEXT("1,1,0"),TEXT("0,1,1")};
     Game->StartLevel(false,1);
     TestEqual(TEXT("configured wave total is applied to game mode"),Game->Rules.GetTotalCount(),4);
-    Game->WaveComposition=OriginalPlan;
+    Game->WaveComposition=TierTestOriginalPlan;
 
     Game->StartLevel(false,1);
     Game->UpdateExpression(TEXT("0"),TEXT(""));
@@ -218,6 +230,40 @@ bool FFunctionWorldCollision::RunTest(const FString&)
     TestEqual(TEXT("next level resets enemy count"),Game->Rules.GetRemainingCount(),30);
     TestEqual(TEXT("next level resets mistakes"),Game->GetMistakesRemaining(),3);
     TestEqual(TEXT("next level resets wave"),Game->Rules.GetWave(),1);
+
+    const TArray<FString> OriginalPlan=Game->WaveComposition;
+    Game->WaveComposition={TEXT("1,0,1")};
+    Game->StartLevel(false,1);
+    Game->UpdateExpression(TEXT("0"),TEXT(""));
+    for (int I=0;I<6;++I) Game->Tick(0.1f);
+    FFunctionEnemy* ThreeLevelEnemy=Game->Enemies.FindByPredicate([](const FFunctionEnemy& Enemy) { return Enemy.Health==3; });
+    FFunctionEnemy* OneLevelEnemy=Game->Enemies.FindByPredicate([](const FFunctionEnemy& Enemy) { return Enemy.Health==1; });
+    if (TestTrue(TEXT("three-level and one-level enemies spawn"),ThreeLevelEnemy && OneLevelEnemy))
+    {
+        const int64 ThreeLevelId=ThreeLevelEnemy->Id;
+        TWeakObjectPtr<ACharacter> ThreeLevelActor=ThreeLevelEnemy->Actor;
+        ThreeLevelEnemy->Actor->SetActorLocation(FVector(-650,0,90));
+        OneLevelEnemy->Actor->SetActorLocation(FVector(-350,1000,90));
+        TestTrue(TEXT("level three enemy starts red"),EnemyTint(ThreeLevelEnemy->Actor.Get()).Equals(FLinearColor::Red,0.01f));
+
+        Game->Fire();
+        RunShot();
+        ThreeLevelEnemy=Game->Enemies.FindByPredicate([ThreeLevelId](const FFunctionEnemy& Enemy) { return Enemy.Id==ThreeLevelId; });
+        TestTrue(TEXT("level three drops to level two after one hit"),ThreeLevelEnemy && ThreeLevelEnemy->Health==2);
+        if (ThreeLevelEnemy) TestTrue(TEXT("level two state is yellow"),EnemyTint(ThreeLevelEnemy->Actor.Get()).Equals(FLinearColor::Yellow,0.01f));
+
+        Game->Fire();
+        RunShot();
+        ThreeLevelEnemy=Game->Enemies.FindByPredicate([ThreeLevelId](const FFunctionEnemy& Enemy) { return Enemy.Id==ThreeLevelId; });
+        TestTrue(TEXT("level two drops to level one after another hit"),ThreeLevelEnemy && ThreeLevelEnemy->Health==1);
+        if (ThreeLevelEnemy) TestTrue(TEXT("level one state is green"),EnemyTint(ThreeLevelEnemy->Actor.Get()).Equals(FLinearColor::Green,0.01f));
+
+        Game->Fire();
+        RunShot();
+        TestFalse(TEXT("level one enemy dies on the next hit"),ThreeLevelActor.IsValid());
+        TestEqual(TEXT("three hits count one level three death"),Game->Rules.GetKilledCount(),1);
+    }
+    Game->WaveComposition=OriginalPlan;
     Game->ReturnToMenu();
     return true;
 }

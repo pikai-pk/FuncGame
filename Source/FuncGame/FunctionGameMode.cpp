@@ -66,6 +66,26 @@ namespace
         OutTime=T;
         return true;
     }
+
+    void ApplyEnemyTierAppearance(ACharacter* Enemy, int32 Tier, UMaterialInterface* TintMaterial)
+    {
+        if (!Enemy || !Enemy->GetMesh() || !TintMaterial || Tier<=0) return;
+
+        const FLinearColor TierColors[]={FLinearColor::Green,FLinearColor::Yellow,FLinearColor::Red};
+        const FLinearColor Color=TierColors[FMath::Clamp(Tier-1,0,2)];
+        USkeletalMeshComponent* Mesh=Enemy->GetMesh();
+        for (int32 Slot=0;Slot<Mesh->GetNumMaterials();++Slot)
+        {
+            UMaterialInstanceDynamic* Dynamic=Cast<UMaterialInstanceDynamic>(Mesh->GetMaterial(Slot));
+            if (!Dynamic)
+            {
+                Dynamic=UMaterialInstanceDynamic::Create(TintMaterial,Mesh);
+                if (!Dynamic) continue;
+                Mesh->SetMaterial(Slot,Dynamic);
+            }
+            Dynamic->SetVectorParameterValue(TEXT("Tint"),Color);
+        }
+    }
 }
 
 AFunctionGameMode::AFunctionGameMode()
@@ -425,14 +445,7 @@ bool AFunctionGameMode::TrySpawnEnemy()
     Enemy->GetMesh()->SetRelativeRotation(FRotator(0,270,0));
     if (EnemyAnimation) Enemy->GetMesh()->SetAnimInstanceClass(EnemyAnimation);
     const int32 Level=Rules.GetNextEnemyLevel();
-    const FLinearColor Colors[]={FLinearColor::Green,FLinearColor::Yellow,FLinearColor::Red};
-    if (TintMaterial)
-        for (int32 Slot=0;Slot<Enemy->GetMesh()->GetNumMaterials();++Slot)
-        {
-            UMaterialInstanceDynamic* Dynamic=UMaterialInstanceDynamic::Create(TintMaterial,Enemy->GetMesh());
-            Dynamic->SetVectorParameterValue(TEXT("Tint"),Colors[FMath::Clamp(Level-1,0,2)]);
-            Enemy->GetMesh()->SetMaterial(Slot,Dynamic);
-        }
+    ApplyEnemyTierAppearance(Enemy,Level,TintMaterial);
     const int64 Id=NextEnemyId++;
     if (!Rules.RegisterSpawn(Id)) { Enemy->Destroy(); return false; }
     FFunctionEnemy Data;
@@ -517,6 +530,7 @@ void AFunctionGameMode::UpdateShots(float DeltaSeconds)
                     Rules.RegisterDeath(Enemy.Id);
                     if (!IsPlaying()) { Stop=Hit.Time; bFinished=true; break; }
                 }
+                else ApplyEnemyTierAppearance(Enemy.Actor.Get(),Enemy.Health,TintMaterial);
             }
             const FVector ActualEnd=FMath::Lerp(Start,End,Stop);
             AddTrail(Shot,Start,ActualEnd);
